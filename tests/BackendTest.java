@@ -8,6 +8,22 @@ public class BackendTest {
 
     public static void main(String[] args) throws Exception {
         PrintCalc backend = new PrintCalc();
+        // One abstract type dispatches to four concrete service implementations.
+        PrintCalc.PrintService[] services = {
+            new PrintCalc.BlackWhitePrinting(), new PrintCalc.ColorPrinting(),
+            new PrintCalc.BlackWhiteXerox(), new PrintCalc.ColorXerox()
+        };
+        check(services[0].getName().equals("Print B&W"), "Encapsulated service name");
+        double[] longPaperPrices = { 7, 10, 5, 8 };
+        for (int i = 0; i < services.length; i++) {
+            check(services[i].pricePerPage(2) == longPaperPrices[i], "Polymorphic paper pricing");
+            check(services[i].costForPages(2, 3) == longPaperPrices[i] * 3, "Inherited cost calculation");
+        }
+        try {
+            services[0].costForPages(0, 0);
+            throw new AssertionError("Invalid page count accepted by abstraction");
+        } catch (IllegalArgumentException expected) { }
+
         check(backend.authenticate("admin", "admin123") == PrintCalc.Role.ADMIN, "Admin login");
         check(backend.authenticate("cashier", "cashier123") == PrintCalc.Role.CASHIER, "Cashier login");
         check(backend.authenticate("wrong", "wrong") == PrintCalc.Role.INVALID, "Invalid login");

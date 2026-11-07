@@ -14,6 +14,66 @@ import java.util.List;
 public class PrintCalc {
     public enum Role { ADMIN, CASHIER, INVALID }
     public record Payment(String date, String time, double total, double cash, double change) {}
+    // ABSTRACTION: all printing services share this contract and cost calculation.
+    public static abstract class PrintService {
+        // ENCAPSULATION: the service name is private and cannot be changed after construction.
+        private final String name;
+
+        protected PrintService(String name) { this.name = name; }
+        public final String getName() { return name; }
+        public abstract double pricePerPage(int paper);
+
+        public final double costForPages(int paper, int pages) {
+            if (pages <= 0) throw new IllegalArgumentException("Enter a valid number of pages!");
+            return pricePerPage(paper) * pages;
+        }
+
+        protected final double paperPrice(int paper, double shortPrice, double a4Price, double longPrice) {
+            switch (paper) {
+                case 0: return shortPrice;
+                case 1: return a4Price;
+                case 2: return longPrice;
+                default: throw new IllegalArgumentException("Choose a valid paper size!");
+            }
+        }
+    }
+
+    // INHERITANCE: concrete services inherit naming, validation, and cost calculation.
+    public static final class BlackWhitePrinting extends PrintService {
+        public BlackWhitePrinting() { super("Print B&W"); }
+        @Override
+        public double pricePerPage(int paper) { return paperPrice(paper, 3, 5, 7); }
+    }
+
+    public static final class ColorPrinting extends PrintService {
+        public ColorPrinting() { super("Print Color"); }
+        @Override
+        public double pricePerPage(int paper) { return paperPrice(paper, 5, 7, 10); }
+    }
+
+    public static final class BlackWhiteXerox extends PrintService {
+        public BlackWhiteXerox() { super("Xerox B&W"); }
+        @Override
+        public double pricePerPage(int paper) { return paperPrice(paper, 2, 3, 5); }
+    }
+
+    public static final class ColorXerox extends PrintService {
+        public ColorXerox() { super("Xerox Color"); }
+        @Override
+        public double pricePerPage(int paper) { return paperPrice(paper, 5, 6, 8); }
+    }
+
+    // POLYMORPHISM: callers use PrintService; Java chooses each overridden price method.
+    private static final PrintService[] SERVICES = {
+        new BlackWhitePrinting(), new ColorPrinting(), new BlackWhiteXerox(), new ColorXerox()
+    };
+
+    private static PrintService serviceAt(int index) {
+        if (index < 0 || index >= SERVICES.length) throw new IllegalArgumentException("Choose a valid service!");
+        return SERVICES[index];
+    }
+
+    // ENCAPSULATION: stock, orders, and sales can only change through backend operations.
     private int paperShort = 500;
     private int paperA4 = 500;
     private int paperLong = 500;
@@ -27,8 +87,7 @@ public class PrintCalc {
     }
 
     public static double pricePerPage(int service, int paper) {
-        double[][] prices = { { 3, 5, 7 }, { 5, 7, 10 }, { 2, 3, 5 }, { 5, 6, 8 } };
-        return prices[service][paper];
+        return serviceAt(service).pricePerPage(paper);
     }
 
     public int getPaperCount(String type) {
@@ -54,12 +113,13 @@ public class PrintCalc {
 
     public String[] addOrderItem(int service, int paper, int pages) {
         if (pages <= 0) throw new IllegalArgumentException("Enter a valid number of pages!");
-        String serviceName = new String[] { "Print B&W", "Print Color", "Xerox B&W", "Xerox Color" }[service];
+        PrintService selectedService = serviceAt(service);
+        String serviceName = selectedService.getName();
         String paperName = new String[] { "Short", "A4", "Long" }[paper];
         if (!hasPaper(paperName, pages)) throw new IllegalArgumentException(
                 "Not enough " + paperName + " paper! (have " + getPaperCount(paperName) + ")");
         String[] item = { serviceName, paperName, String.valueOf(pages),
-                String.format("%.2f", pricePerPage(service, paper) * pages) };
+                String.format("%.2f", selectedService.costForPages(paper, pages)) };
         currentOrder.add(item);
         return item.clone();
     }
