@@ -1051,39 +1051,27 @@ public class PrintCalc extends JFrame {
                 BorderFactory.createMatteBorder(1, 1, 3, 2, new Color(200, 204, 210)),
                 BorderFactory.createEmptyBorder(0, 0, 0, 0)));
         paper.add(receipt, BorderLayout.CENTER);
-        content.add(paper, BorderLayout.CENTER);
-        Rectangle screen = getGraphicsConfiguration().getBounds();
-        Insets screenInsets = Toolkit.getDefaultToolkit().getScreenInsets(getGraphicsConfiguration());
-        int availableHeight = screen.height - screenInsets.top - screenInsets.bottom - 40;
-        int lineHeight = receipt.getFontMetrics(receipt.getFont()).getHeight();
-        int itemsPerPage = Math.max(1, ((availableHeight - 180) / lineHeight - 22) / 2);
-        int pageCount = Math.max(1, (currentOrder.size() + itemsPerPage - 1) / itemsPerPage);
-        final int[] page = { 0 };
-        JButton previous = makeButton("Previous", DIM);
-        JButton next = makeButton("Next", ACCENT);
+        // Scroll the complete paper, including its header and payment summary.
+        JScrollPane receiptScroll = new JScrollPane(paper, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
+                JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        receiptScroll.setBorder(BorderFactory.createEmptyBorder());
+        receiptScroll.getViewport().setBackground(Color.WHITE);
+        receiptScroll.getVerticalScrollBar().setUnitIncrement(24);
+        receiptScroll.setWheelScrollingEnabled(true);
+        content.add(receiptScroll, BorderLayout.CENTER);
         JButton close = makeButton("Done", ACCENT);
         close.setPreferredSize(new Dimension(0, 44));
         close.addActionListener(e -> dialog.dispose());
-        JPanel actions = new JPanel(new GridLayout(1, pageCount > 1 ? 3 : 1, 8, 0));
-        actions.setOpaque(false);
-        if (pageCount > 1) { actions.add(previous); actions.add(next); }
-        actions.add(close);
-        content.add(actions, BorderLayout.SOUTH);
-        Runnable renderPage = () -> {
-            int first = page[0] * itemsPerPage;
-            int last = Math.min(currentOrder.size(), first + itemsPerPage);
-            String text = receiptPageText(date, time, total, cash, change, currentOrder.subList(first, last));
-            if (pageCount > 1) text += String.format("             Page %d of %d%n", page[0] + 1, pageCount);
-            receipt.setText(text);
-            previous.setEnabled(page[0] > 0);
-            next.setEnabled(page[0] + 1 < pageCount);
-            dialog.pack();
-            dialog.setLocationRelativeTo(this);
-        };
-        previous.addActionListener(e -> { if (page[0] > 0) { page[0]--; renderPage.run(); } });
-        next.addActionListener(e -> { if (page[0] + 1 < pageCount) { page[0]++; renderPage.run(); } });
+        content.add(close, BorderLayout.SOUTH);
         dialog.setContentPane(content);
-        renderPage.run();
+        dialog.pack();
+        Rectangle screen = getGraphicsConfiguration().getBounds();
+        Insets screenInsets = Toolkit.getDefaultToolkit().getScreenInsets(getGraphicsConfiguration());
+        int availableHeight = screen.height - screenInsets.top - screenInsets.bottom - 40;
+        int receiptWidth = dialog.getWidth() + receiptScroll.getVerticalScrollBar().getPreferredSize().width;
+        dialog.setSize(receiptWidth, Math.min(dialog.getHeight(), availableHeight));
+        receipt.setCaretPosition(0);
+        receiptScroll.getViewport().setViewPosition(new Point(0, 0));
         dialog.setResizable(false);
         dialog.setLocationRelativeTo(this);
         dialog.getRootPane().setDefaultButton(close);
