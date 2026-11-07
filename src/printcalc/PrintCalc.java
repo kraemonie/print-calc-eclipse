@@ -20,10 +20,6 @@ public class PrintCalc extends JFrame {
     private int paperShort = 500;
     private int paperA4 = 500;
     private int paperLong = 500;
-    private int inkBlack = 500;
-    private int inkCyan = 500;
-    private int inkMagenta = 500;
-    private int inkYellow = 500;
     private ArrayList<String[]> allSales = new ArrayList<>();
     private ArrayList<String[]> currentOrder = new ArrayList<>();
 
@@ -43,7 +39,7 @@ public class PrintCalc extends JFrame {
     private static final Color TEXT = new Color(30, 41, 59);
     private static final Color DIM = new Color(82, 100, 122);
 
-    private JLabel lblShort, lblA4, lblLong, lblBlack, lblCyanInk, lblMagenta, lblYellow;
+    private JLabel lblShort, lblA4, lblLong;
     private DefaultTableModel adminSalesModel;
     private JLabel lblAdminTotalSales, lblAdminTotalAmount;
     private DefaultTableModel orderModel;
@@ -121,8 +117,13 @@ public class PrintCalc extends JFrame {
         card.add(showPassword);
         card.add(Box.createVerticalStrut(8));
 
-        final JLabel lblErr = label("", new Font("Segoe UI", Font.PLAIN, 13), RED);
+        final JLabel lblErr = label(" ", new Font("Segoe UI", Font.PLAIN, 13), RED);
         lblErr.setAlignmentX(Component.CENTER_ALIGNMENT);
+        lblErr.setPreferredSize(new Dimension(360, 36));
+        lblErr.setMinimumSize(new Dimension(0, 36));
+        lblErr.setOpaque(false);
+        lblErr.setBackground(new Color(254, 242, 242));
+        lblErr.setBorder(BorderFactory.createEmptyBorder(6, 10, 6, 10));
         card.add(lblErr);
         card.add(Box.createVerticalStrut(8));
 
@@ -143,7 +144,8 @@ public class PrintCalc extends JFrame {
                 String u = txtUser.getText().trim();
                 String p = new String(txtPass.getPassword()).trim();
                 if (u.equals(adminUser) && p.equals(adminPass)) {
-                    lblErr.setText("");
+                    lblErr.setText(" ");
+                    lblErr.setOpaque(false);
                     txtUser.setText("");
                     txtPass.setText("");
                     showPassword.setSelected(false);
@@ -152,7 +154,8 @@ public class PrintCalc extends JFrame {
                     refreshAdminSales();
                     cardLayout.show(mainPanel, "ADMIN");
                 } else if (u.equals(cashierUser) && p.equals(cashierPass)) {
-                    lblErr.setText("");
+                    lblErr.setText(" ");
+                    lblErr.setOpaque(false);
                     txtUser.setText("");
                     txtPass.setText("");
                     showPassword.setSelected(false);
@@ -161,6 +164,7 @@ public class PrintCalc extends JFrame {
                     cardLayout.show(mainPanel, "CASHIER");
                 } else {
                     lblErr.setText("Invalid username or password");
+                    lblErr.setOpaque(true);
                 }
             }
         };
@@ -232,7 +236,7 @@ public class PrintCalc extends JFrame {
                 BorderFactory.createLineBorder(new Color(210, 222, 237), 1),
                 BorderFactory.createEmptyBorder(20, 20, 20, 20)));
 
-        JLabel pt = label("PAPER STOCK", new Font("Segoe UI", Font.BOLD, 16), CYAN);
+        JLabel pt = label("Available paper", new Font("Segoe UI", Font.BOLD, 16), CYAN);
         pt.setAlignmentX(Component.LEFT_ALIGNMENT);
         paperPanel.add(pt);
         paperPanel.add(Box.createVerticalStrut(15));
@@ -248,34 +252,39 @@ public class PrintCalc extends JFrame {
 
         tab.add(paperPanel);
 
-        // Ink
-        JPanel inkPanel = new JPanel();
-        inkPanel.setLayout(new BoxLayout(inkPanel, BoxLayout.Y_AXIS));
-        inkPanel.setBackground(BG_CARD);
-        inkPanel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(210, 222, 237), 1),
-                BorderFactory.createEmptyBorder(20, 20, 20, 20)));
-
-        JLabel it = label("INK STOCK", new Font("Segoe UI", Font.BOLD, 16), CYAN);
-        it.setAlignmentX(Component.LEFT_ALIGNMENT);
-        inkPanel.add(it);
-        inkPanel.add(Box.createVerticalStrut(15));
-
-        lblBlack = new JLabel();
-        lblCyanInk = new JLabel();
-        lblMagenta = new JLabel();
-        lblYellow = new JLabel();
-        inkPanel.add(stockRow("Black", lblBlack, inkBlack));
-        inkPanel.add(Box.createVerticalStrut(10));
-        inkPanel.add(stockRow("Cyan", lblCyanInk, inkCyan));
-        inkPanel.add(Box.createVerticalStrut(10));
-        inkPanel.add(stockRow("Magenta", lblMagenta, inkMagenta));
-        inkPanel.add(Box.createVerticalStrut(10));
-        inkPanel.add(stockRow("Yellow", lblYellow, inkYellow));
-
-        tab.add(inkPanel);
+        tab.add(buildPriceGuide());
 
         return tab;
+    }
+
+    static double pricePerPage(int service, int paper) {
+        double[][] prices = {
+                { 3, 5, 7 }, { 5, 7, 10 },
+                { 2, 3, 5 }, { 5, 6, 8 }
+        };
+        return prices[service][paper];
+    }
+
+    JPanel buildPriceGuide() {
+        JPanel card = uiCard("Service pricing / Php per page");
+        JPanel sections = new JPanel(new GridLayout(2, 1, 0, 20));
+        sections.setOpaque(false);
+        String[] sizes = { "Short", "A4", "Long" };
+        for (int group = 0; group < 2; group++) {
+            JPanel section = new JPanel(new BorderLayout(0, 10));
+            section.setOpaque(false);
+            section.add(label(group == 0 ? "Printing" : "Xerox", new Font("Segoe UI", Font.BOLD, 16), ACCENT), BorderLayout.NORTH);
+            DefaultTableModel prices = new DefaultTableModel(new String[] { "Paper size", "Black & white", "Colored" }, 0) {
+                public boolean isCellEditable(int row, int column) { return false; }
+            };
+            for (int paper = 0; paper < sizes.length; paper++) {
+                prices.addRow(new Object[] { sizes[paper], pricePerPage(group * 2, paper), pricePerPage(group * 2 + 1, paper) });
+            }
+            section.add(tableScroll(makeTable(prices)), BorderLayout.CENTER);
+            sections.add(section);
+        }
+        card.add(sections, BorderLayout.CENTER);
+        return card;
     }
 
     JPanel stockRow(String name, JLabel valLabel, int qty) {
@@ -308,10 +317,6 @@ public class PrintCalc extends JFrame {
         setStock(lblShort, paperShort);
         setStock(lblA4, paperA4);
         setStock(lblLong, paperLong);
-        setStock(lblBlack, inkBlack);
-        setStock(lblCyanInk, inkCyan);
-        setStock(lblMagenta, inkMagenta);
-        setStock(lblYellow, inkYellow);
     }
 
     void setStock(JLabel l, int q) {
@@ -334,7 +339,7 @@ public class PrintCalc extends JFrame {
                 BorderFactory.createLineBorder(new Color(210, 222, 237), 1),
                 BorderFactory.createEmptyBorder(25, 25, 25, 25)));
 
-        pc.add(label("ADD PAPER", new Font("Segoe UI", Font.BOLD, 16), GREEN));
+        pc.add(label("Restock paper", new Font("Segoe UI", Font.BOLD, 16), GREEN));
         pc.add(Box.createVerticalStrut(20));
         pc.add(label("Paper Size", new Font("Segoe UI", Font.PLAIN, 13), DIM));
         pc.add(Box.createVerticalStrut(5));
@@ -377,62 +382,14 @@ public class PrintCalc extends JFrame {
             }
         });
 
+        for (Component child : pc.getComponents()) {
+            if (child instanceof JComponent) {
+                ((JComponent) child).setAlignmentX(Component.LEFT_ALIGNMENT);
+            }
+        }
         tab.add(pc);
 
-        // Ink card
-        JPanel ic = new JPanel();
-        ic.setLayout(new BoxLayout(ic, BoxLayout.Y_AXIS));
-        ic.setBackground(BG_CARD);
-        ic.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(210, 222, 237), 1),
-                BorderFactory.createEmptyBorder(25, 25, 25, 25)));
-
-        ic.add(label("ADD INK", new Font("Segoe UI", Font.BOLD, 16), GREEN));
-        ic.add(Box.createVerticalStrut(20));
-        ic.add(label("Ink Color", new Font("Segoe UI", Font.PLAIN, 13), DIM));
-        ic.add(Box.createVerticalStrut(5));
-        final JComboBox<String> cbI = combo(new String[] { "Black", "Cyan", "Magenta", "Yellow" });
-        cbI.setMaximumSize(new Dimension(Integer.MAX_VALUE, 35));
-        ic.add(cbI);
-        ic.add(Box.createVerticalStrut(15));
-        ic.add(label("Quantity", new Font("Segoe UI", Font.PLAIN, 13), DIM));
-        ic.add(Box.createVerticalStrut(5));
-        final JTextField tfIQ = makeField();
-        tfIQ.setMaximumSize(new Dimension(Integer.MAX_VALUE, 35));
-        ic.add(tfIQ);
-        ic.add(Box.createVerticalStrut(20));
-        JButton bI = makeButton("Add Ink", GREEN);
-        bI.setMaximumSize(new Dimension(Integer.MAX_VALUE, 38));
-        ic.add(bI);
-
-        bI.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                try {
-                    int q = Integer.parseInt(tfIQ.getText().trim());
-                    if (q <= 0) {
-                        err("Enter a valid quantity!");
-                        return;
-                    }
-                    String c = (String) cbI.getSelectedItem();
-                    if (c.equals("Black"))
-                        inkBlack += q;
-                    else if (c.equals("Cyan"))
-                        inkCyan += q;
-                    else if (c.equals("Magenta"))
-                        inkMagenta += q;
-                    else
-                        inkYellow += q;
-                    refreshInventory();
-                    tfIQ.setText("");
-                    ok("Added " + q + " units of " + c + " ink!");
-                } catch (NumberFormatException x) {
-                    err("Enter a number!");
-                }
-            }
-        });
-
-        tab.add(ic);
+        tab.add(buildPriceGuide());
         return tab;
     }
 
@@ -520,13 +477,20 @@ public class PrintCalc extends JFrame {
         JPanel form = new JPanel(new GridBagLayout());
         form.setOpaque(false);
         final JComboBox<String> cbService = combo(new String[] {
-                "Print B&W  -  Php 3.00/page", "Print Color  -  Php 8.00/page",
-                "Xerox B&W  -  Php 1.50/page", "Xerox Color  -  Php 5.00/page" });
+                "Print - Black & white", "Print - Colored",
+                "Xerox - Black & white", "Xerox - Colored" });
         final JComboBox<String> cbPaper = combo(new String[] { "Short (8.5x11)", "A4 (8.27x11.69)", "Long (8.5x13)" });
         final JTextField tfPages = makeField();
         addFormRow(form, 0, "Service", cbService);
         addFormRow(form, 1, "Paper size", cbPaper);
         addFormRow(form, 2, "Number of pages", tfPages);
+        final JLabel unitPrice = label("", new Font("Segoe UI", Font.BOLD, 14), ACCENT);
+        addFormRow(form, 3, "Price per page", unitPrice);
+        Runnable refreshPrice = () -> unitPrice.setText(String.format("Php %.2f / page",
+                pricePerPage(cbService.getSelectedIndex(), cbPaper.getSelectedIndex())));
+        cbService.addActionListener(e -> refreshPrice.run());
+        cbPaper.addActionListener(e -> refreshPrice.run());
+        refreshPrice.run();
         entry.add(form, BorderLayout.CENTER);
         JButton btnAdd = makeButton("Add to order", ACCENT);
         btnAdd.setPreferredSize(new Dimension(0, 44));
@@ -594,28 +558,9 @@ public class PrintCalc extends JFrame {
                     }
 
                     int si = cbService.getSelectedIndex();
-                    String serviceName;
-                    double price;
-                    String inkType;
-                    if (si == 0) {
-                        serviceName = "Print B&W";
-                        price = 3.00;
-                        inkType = "BW";
-                    } else if (si == 1) {
-                        serviceName = "Print Color";
-                        price = 8.00;
-                        inkType = "Color";
-                    } else if (si == 2) {
-                        serviceName = "Xerox B&W";
-                        price = 1.50;
-                        inkType = "BW";
-                    } else {
-                        serviceName = "Xerox Color";
-                        price = 5.00;
-                        inkType = "Color";
-                    }
-
+                    String serviceName = new String[] { "Print B&W", "Print Color", "Xerox B&W", "Xerox Color" }[si];
                     int pi = cbPaper.getSelectedIndex();
+                    double price = pricePerPage(si, pi);
                     String paperName;
                     if (pi == 0)
                         paperName = "Short";
@@ -628,14 +573,10 @@ public class PrintCalc extends JFrame {
                         err("Not enough " + paperName + " paper! (have " + getPaperCount(paperName) + ")");
                         return;
                     }
-                    if (!hasInk(inkType, pages)) {
-                        err("Not enough ink for this job!");
-                        return;
-                    }
 
                     double sub = price * pages;
                     currentOrder.add(new String[] { serviceName, paperName, String.valueOf(pages),
-                            String.format("%.2f", sub), inkType });
+                            String.format("%.2f", sub) });
                     orderModel.addRow(
                             new Object[] { serviceName, paperName, pages, "Php " + String.format("%.2f", sub) });
                     updateOrderTotal();
@@ -685,14 +626,9 @@ public class PrintCalc extends JFrame {
                 for (String[] item : currentOrder) {
                     String paper = item[1];
                     int qty = Integer.parseInt(item[2]);
-                    String ink = item[4];
 
                     if (!hasPaper(paper, qty)) {
                         err("Not enough " + paper + " paper for \"" + item[0] + "\"!");
-                        return;
-                    }
-                    if (!hasInk(ink, qty)) {
-                        err("Not enough ink for \"" + item[0] + "\"!");
                         return;
                     }
                 }
@@ -703,10 +639,8 @@ public class PrintCalc extends JFrame {
                 for (String[] item : currentOrder) {
                     String paper = item[1];
                     int qty = Integer.parseInt(item[2]);
-                    String ink = item[4];
 
                     deductPaper(paper, qty);
-                    deductInk(ink, qty);
 
                     allSales.add(new String[] { date, time, item[0], paper, item[2], item[3] });
                 }
@@ -759,12 +693,6 @@ public class PrintCalc extends JFrame {
         return paperLong;
     }
 
-    boolean hasInk(String ink, int qty) {
-        if (ink.equals("BW"))
-            return inkBlack >= qty;
-        return inkBlack >= qty && inkCyan >= qty && inkMagenta >= qty && inkYellow >= qty;
-    }
-
     void deductPaper(String type, int qty) {
         if (type.equals("Short"))
             paperShort -= qty;
@@ -772,15 +700,6 @@ public class PrintCalc extends JFrame {
             paperA4 -= qty;
         else
             paperLong -= qty;
-    }
-
-    void deductInk(String ink, int qty) {
-        inkBlack -= qty;
-        if (ink.equals("Color")) {
-            inkCyan -= qty;
-            inkMagenta -= qty;
-            inkYellow -= qty;
-        }
     }
 
     // ===================== CSV =====================
@@ -990,22 +909,73 @@ public class PrintCalc extends JFrame {
         JPanel content = new JPanel(new BorderLayout(0, 16));
         content.setBackground(BG_PAGE);
         content.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
-        JTextArea receipt = new JTextArea(receiptText(date, time, total, cash, change));
-        receipt.setEditable(false);
-        receipt.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 13));
-        receipt.setForeground(Color.BLACK);
-        receipt.setBackground(Color.WHITE);
-        receipt.setBorder(BorderFactory.createEmptyBorder(24, 18, 24, 18));
-        receipt.setCaretPosition(0);
-        JScrollPane scroll = new JScrollPane(receipt);
-        scroll.setBorder(BorderFactory.createLineBorder(new Color(210, 222, 237)));
-        content.add(scroll, BorderLayout.CENTER);
+        JPanel paper = new JPanel(new BorderLayout(0, 24));
+        paper.setBackground(Color.WHITE);
+        paper.setBorder(BorderFactory.createEmptyBorder(26, 26, 26, 26));
+        JPanel heading = new JPanel(new BorderLayout(0, 12));
+        heading.setOpaque(false);
+        JLabel brand = label("PRINTCALC", new Font("Segoe UI", Font.BOLD, 26), ACCENT);
+        heading.add(brand, BorderLayout.NORTH);
+        JPanel details = new JPanel(new BorderLayout(0, 6));
+        details.setOpaque(false);
+        details.add(label("Payment received", new Font("Segoe UI", Font.BOLD, 18), GREEN), BorderLayout.NORTH);
+        details.add(label("Sales receipt  /  " + date + "  " + time,
+                new Font("Segoe UI", Font.PLAIN, 12), DIM), BorderLayout.SOUTH);
+        heading.add(details, BorderLayout.CENTER);
+        heading.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createMatteBorder(0, 0, 3, 0, ACCENT),
+                BorderFactory.createEmptyBorder(0, 0, 20, 0)));
+        paper.add(heading, BorderLayout.NORTH);
+
+        JPanel lines = new JPanel();
+        lines.setLayout(new BoxLayout(lines, BoxLayout.Y_AXIS));
+        lines.setBackground(Color.WHITE);
+        for (String[] item : currentOrder) {
+            JPanel row = new JPanel(new BorderLayout(12, 6));
+            row.setOpaque(false);
+            row.setAlignmentX(Component.LEFT_ALIGNMENT);
+            row.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(225, 232, 241)),
+                    BorderFactory.createEmptyBorder(14, 0, 14, 0)));
+            row.add(label(item[0], new Font("Segoe UI", Font.BOLD, 15), TEXT), BorderLayout.WEST);
+            row.add(label("Php " + item[3], new Font("Segoe UI", Font.BOLD, 15), TEXT), BorderLayout.EAST);
+            row.add(label(item[1] + " paper  /  " + item[2] + " page(s)",
+                    new Font("Segoe UI", Font.PLAIN, 13), DIM), BorderLayout.SOUTH);
+            row.setMaximumSize(new Dimension(Integer.MAX_VALUE, row.getPreferredSize().height));
+            lines.add(row);
+        }
+        lines.add(Box.createVerticalGlue());
+        JScrollPane itemScroll = new JScrollPane(lines);
+        itemScroll.setBorder(BorderFactory.createEmptyBorder());
+        itemScroll.setPreferredSize(new Dimension(360, 180));
+        paper.add(itemScroll, BorderLayout.CENTER);
+
+        JPanel footer = new JPanel(new BorderLayout(0, 18));
+        footer.setOpaque(false);
+        JPanel totals = new JPanel(new GridLayout(3, 2, 12, 12));
+        totals.setBackground(new Color(239, 246, 255));
+        totals.setBorder(BorderFactory.createEmptyBorder(18, 18, 18, 18));
+        String[] captions = { "TOTAL PAID", "Cash received", "Change" };
+        double[] amounts = { total, cash, change };
+        for (int i = 0; i < captions.length; i++) {
+            Font font = new Font("Segoe UI", i == 0 ? Font.BOLD : Font.PLAIN, i == 0 ? 20 : 14);
+            totals.add(label(captions[i], font, i == 0 ? ACCENT : DIM));
+            JLabel amount = label(String.format("Php %.2f", amounts[i]), font, i == 0 ? ACCENT : TEXT);
+            amount.setHorizontalAlignment(SwingConstants.RIGHT);
+            totals.add(amount);
+        }
+        footer.add(totals, BorderLayout.NORTH);
+        JLabel thanks = label("Thank you for printing with us!", new Font("Segoe UI", Font.PLAIN, 13), DIM);
+        thanks.setHorizontalAlignment(SwingConstants.CENTER);
+        footer.add(thanks, BorderLayout.SOUTH);
+        paper.add(footer, BorderLayout.SOUTH);
+        content.add(paper, BorderLayout.CENTER);
         JButton close = makeButton("Done", ACCENT);
         close.addActionListener(e -> dialog.dispose());
         content.add(close, BorderLayout.SOUTH);
         dialog.setContentPane(content);
-        dialog.setSize(460, 580);
-        dialog.setMinimumSize(new Dimension(440, 400));
+        dialog.setSize(520, 680);
+        dialog.setMinimumSize(new Dimension(500, 600));
         dialog.setLocationRelativeTo(this);
         dialog.getRootPane().setDefaultButton(close);
         dialog.setVisible(true);
