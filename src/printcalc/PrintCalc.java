@@ -173,6 +173,23 @@ public class PrintCalc extends JFrame {
             }
         });
 
+        // BoxLayout needs the same alignment axis for every full-width row.
+        for (Component child : card.getComponents()) {
+            if (child instanceof JComponent) {
+                JComponent row = (JComponent) child;
+                row.setAlignmentX(Component.LEFT_ALIGNMENT);
+                Dimension preferred = row.getPreferredSize();
+                row.setMaximumSize(new Dimension(Integer.MAX_VALUE,
+                        row instanceof JTextField ? 38 : row instanceof JButton ? 40 : preferred.height));
+            }
+        }
+        title.setHorizontalAlignment(SwingConstants.CENTER);
+        sub.setHorizontalAlignment(SwingConstants.CENTER);
+        hint.setHorizontalAlignment(SwingConstants.CENTER);
+        lblErr.setHorizontalAlignment(SwingConstants.LEFT);
+        showPassword.setHorizontalAlignment(SwingConstants.LEFT);
+        showPassword.setBorder(BorderFactory.createEmptyBorder());
+        showPassword.setMargin(new Insets(0, 0, 0, 0));
         bg.add(card);
         return bg;
     }
@@ -695,9 +712,7 @@ public class PrintCalc extends JFrame {
                 }
 
                 double change = cash - orderTotal;
-                ok("Order complete!\n\nTotal: Php " + String.format("%.2f", orderTotal) +
-                        "\nCash: Php " + String.format("%.2f", cash) +
-                        "\nChange: Php " + String.format("%.2f", change));
+                showReceipt(date, time, orderTotal, cash, change);
 
                 currentOrder.clear();
                 orderModel.setRowCount(0);
@@ -942,6 +957,58 @@ public class PrintCalc extends JFrame {
         t.getTableHeader().setForeground(CYAN);
         t.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 12));
         return t;
+    }
+
+    String receiptText(String date, String time, double total, double cash, double change) {
+        String rule = "------------------------------------------\n";
+        StringBuilder receipt = new StringBuilder();
+        receipt.append("                PRINTCALC\n");
+        receipt.append("             PRINTING SERVICES\n");
+        receipt.append("               SALES RECEIPT\n\n");
+        receipt.append(date).append("  ").append(time).append("\n");
+        receipt.append(rule);
+        receipt.append(String.format("%-30s %11s%n", "ITEM / QUANTITY", "AMOUNT"));
+        receipt.append(rule);
+        for (String[] item : currentOrder) {
+            receipt.append(item[0]).append(" / ").append(item[1]).append("\n");
+            receipt.append(String.format("  %-28s %11s%n", item[2] + " page(s)",
+                    String.format("Php %.2f", Double.parseDouble(item[3]))));
+        }
+        receipt.append(rule);
+        receipt.append(String.format("%-22s %19s%n", "TOTAL", String.format("Php %.2f", total)));
+        receipt.append(String.format("%-22s %19s%n", "Cash received", String.format("Php %.2f", cash)));
+        receipt.append(String.format("%-22s %19s%n", "CHANGE", String.format("Php %.2f", change)));
+        receipt.append(rule);
+        receipt.append("          Thank you for your order!\n");
+        receipt.append("             Please come again.\n");
+        return receipt.toString();
+    }
+
+    void showReceipt(String date, String time, double total, double cash, double change) {
+        JDialog dialog = new JDialog(this, "Sales receipt", true);
+        dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
+        JPanel content = new JPanel(new BorderLayout(0, 16));
+        content.setBackground(BG_PAGE);
+        content.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+        JTextArea receipt = new JTextArea(receiptText(date, time, total, cash, change));
+        receipt.setEditable(false);
+        receipt.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 13));
+        receipt.setForeground(Color.BLACK);
+        receipt.setBackground(Color.WHITE);
+        receipt.setBorder(BorderFactory.createEmptyBorder(24, 18, 24, 18));
+        receipt.setCaretPosition(0);
+        JScrollPane scroll = new JScrollPane(receipt);
+        scroll.setBorder(BorderFactory.createLineBorder(new Color(210, 222, 237)));
+        content.add(scroll, BorderLayout.CENTER);
+        JButton close = makeButton("Done", ACCENT);
+        close.addActionListener(e -> dialog.dispose());
+        content.add(close, BorderLayout.SOUTH);
+        dialog.setContentPane(content);
+        dialog.setSize(460, 580);
+        dialog.setMinimumSize(new Dimension(440, 400));
+        dialog.setLocationRelativeTo(this);
+        dialog.getRootPane().setDefaultButton(close);
+        dialog.setVisible(true);
     }
 
     void ok(String msg) {
