@@ -795,19 +795,38 @@ public class PrintCalc extends JFrame {
     // ===================== UI HELPERS =====================
 
     JToggleButton choiceCard(String text, String name) {
-        JToggleButton button = new JToggleButton(text);
+        JToggleButton button = new JToggleButton(text) {
+            @Override
+            protected void paintComponent(Graphics graphics) {
+                Graphics2D g = (Graphics2D) graphics.create();
+                g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g.setColor(getBackground());
+                g.fillRoundRect(1, 1, getWidth() - 2, getHeight() - 2, 22, 22);
+                g.dispose();
+                super.paintComponent(graphics);
+            }
+
+            @Override
+            protected void paintBorder(Graphics graphics) {
+                Graphics2D g = (Graphics2D) graphics.create();
+                g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g.setColor(isSelected() ? ACCENT : new Color(210, 222, 237));
+                g.setStroke(new BasicStroke(2f));
+                g.drawRoundRect(1, 1, getWidth() - 3, getHeight() - 3, 22, 22);
+                g.dispose();
+            }
+        };
         button.setName(name);
         button.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        button.setFocusPainted(true);
+        button.setFocusPainted(false);
         button.setContentAreaFilled(false);
-        button.setOpaque(true);
+        button.setOpaque(false);
         button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         Runnable style = () -> {
             button.setBackground(button.isSelected() ? new Color(219, 234, 254) : BG_INPUT);
             button.setForeground(button.isSelected() ? ACCENT : TEXT);
-            button.setBorder(BorderFactory.createCompoundBorder(
-                    BorderFactory.createLineBorder(button.isSelected() ? ACCENT : new Color(210, 222, 237), 2),
-                    BorderFactory.createEmptyBorder(8, 10, 8, 10)));
+            button.setBorder(BorderFactory.createEmptyBorder(10, 12, 10, 12));
+            button.repaint();
         };
         button.addItemListener(e -> style.run());
         style.run();
