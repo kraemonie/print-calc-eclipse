@@ -12,7 +12,7 @@ public class PrintCalcUI extends JFrame {
     private CardLayout cardLayout;
     private JPanel mainPanel;
 
-    private final PrintCalcBackend backend = new PrintCalcBackend();
+    private final PrintCalc backend;
 
     private static final Color BG_PAGE = new Color(243, 247, 252);
     private static final Color BG_CARD = new Color(255, 255, 255);
@@ -33,6 +33,11 @@ public class PrintCalcUI extends JFrame {
     private JLabel lblOrderTotal, lblCashierTotal;
 
     public PrintCalcUI() {
+        this(new PrintCalc());
+    }
+
+    public PrintCalcUI(PrintCalc backend) {
+        this.backend = backend;
         setTitle("PrintCalc");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setSize(1180, 820);
@@ -129,8 +134,8 @@ public class PrintCalcUI extends JFrame {
             public void actionPerformed(ActionEvent e) {
                 String u = txtUser.getText().trim();
                 String p = new String(txtPass.getPassword()).trim();
-                PrintCalcBackend.Role role = backend.authenticate(u, p);
-                if (role == PrintCalcBackend.Role.ADMIN) {
+                PrintCalc.Role role = backend.authenticate(u, p);
+                if (role == PrintCalc.Role.ADMIN) {
                     lblErr.setText(" ");
                     lblErr.setOpaque(false);
                     txtUser.setText("");
@@ -140,7 +145,7 @@ public class PrintCalcUI extends JFrame {
                     refreshInventory();
                     refreshAdminSales();
                     cardLayout.show(mainPanel, "ADMIN");
-                } else if (role == PrintCalcBackend.Role.CASHIER) {
+                } else if (role == PrintCalc.Role.CASHIER) {
                     lblErr.setText(" ");
                     lblErr.setOpaque(false);
                     txtUser.setText("");
@@ -245,7 +250,7 @@ public class PrintCalcUI extends JFrame {
     }
 
     static double pricePerPage(int service, int paper) {
-        return PrintCalcBackend.pricePerPage(service, paper);
+        return PrintCalc.pricePerPage(service, paper);
     }
 
     JPanel buildPriceGuide() {
@@ -634,7 +639,7 @@ public class PrintCalcUI extends JFrame {
                     return;
                 }
                 try {
-                    PrintCalcBackend.Payment payment = backend.checkout(cash);
+                    PrintCalc.Payment payment = backend.checkout(cash);
                     showReceipt(payment.date(), payment.time(), payment.total(), payment.cash(), payment.change());
                 } catch (IllegalArgumentException x) {
                     err(x.getMessage());
@@ -977,4 +982,13 @@ public class PrintCalcUI extends JFrame {
         JOptionPane.showMessageDialog(this, msg, "Error", JOptionPane.ERROR_MESSAGE);
     }
 
+    public static void launch(PrintCalc backend) {
+        UIManager.put("TabbedPane.selected", BG_CARD);
+        UIManager.put("TabbedPane.contentAreaColor", BG_CARD);
+        UIManager.put("TabbedPane.tabInsets", new Insets(12, 20, 12, 20));
+        UIManager.put("Panel.background", BG_PAGE);
+        UIManager.put("OptionPane.background", BG_PAGE);
+        UIManager.put("OptionPane.messageForeground", TEXT);
+        SwingUtilities.invokeLater(() -> new PrintCalcUI(backend).setVisible(true));
+    }
 }

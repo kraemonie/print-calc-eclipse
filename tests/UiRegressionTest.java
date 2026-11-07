@@ -3,7 +3,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.util.*;
 public class UiRegressionTest {
- static class App extends PrintCalc {
+ static class App extends PrintCalcUI {
   String error; double paid;
   void err(String message){error=message;}
   void showReceipt(String date,String time,double total,double cash,double change){paid=total;}
@@ -53,4 +53,3 @@ public class UiRegressionTest {
   });
  }
 }
-

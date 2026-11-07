@@ -7,14 +7,14 @@ public class BackendTest {
     }
 
     public static void main(String[] args) throws Exception {
-        PrintCalcBackend backend = new PrintCalcBackend();
-        check(backend.authenticate("admin", "admin123") == PrintCalcBackend.Role.ADMIN, "Admin login");
-        check(backend.authenticate("cashier", "cashier123") == PrintCalcBackend.Role.CASHIER, "Cashier login");
-        check(backend.authenticate("wrong", "wrong") == PrintCalcBackend.Role.INVALID, "Invalid login");
+        PrintCalc backend = new PrintCalc();
+        check(backend.authenticate("admin", "admin123") == PrintCalc.Role.ADMIN, "Admin login");
+        check(backend.authenticate("cashier", "cashier123") == PrintCalc.Role.CASHIER, "Cashier login");
+        check(backend.authenticate("wrong", "wrong") == PrintCalc.Role.INVALID, "Invalid login");
         double[][] prices = { { 3, 5, 7 }, { 5, 7, 10 }, { 2, 3, 5 }, { 5, 6, 8 } };
         for (int service = 0; service < 4; service++) {
             for (int paper = 0; paper < 3; paper++) {
-                check(PrintCalcBackend.pricePerPage(service, paper) == prices[service][paper], "Price mismatch");
+                check(PrintCalc.pricePerPage(service, paper) == prices[service][paper], "Price mismatch");
             }
         }
         backend.addOrderItem(0, 1, 2);
@@ -28,7 +28,7 @@ public class BackendTest {
         } catch (IllegalArgumentException expected) {
             check(backend.getPaperCount("A4") == 500 && backend.sales().isEmpty(), "Failed payment changed state");
         }
-        PrintCalcBackend.Payment payment = backend.checkout(50);
+        PrintCalc.Payment payment = backend.checkout(50);
         check(payment.total() == 34 && payment.change() == 16, "Payment amounts");
         check(backend.getPaperCount("A4") == 498 && backend.getPaperCount("Long") == 497, "Paper deduction");
         check(backend.sales().size() == 2, "Sales recorded");
