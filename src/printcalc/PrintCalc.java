@@ -474,26 +474,88 @@ public class PrintCalc extends JFrame {
         JPanel workspace = new JPanel(new BorderLayout(0, 20));
         workspace.setOpaque(false);
         JPanel entry = uiCard("Add a printing service");
-        JPanel form = new JPanel(new GridBagLayout());
+        JPanel form = new JPanel();
+        form.setLayout(new BoxLayout(form, BoxLayout.Y_AXIS));
         form.setOpaque(false);
-        final JComboBox<String> cbService = combo(new String[] {
-                "Print - Black & white", "Print - Colored",
-                "Xerox - Black & white", "Xerox - Colored" });
-        final JComboBox<String> cbPaper = combo(new String[] { "Short (8.5x11)", "A4 (8.27x11.69)", "Long (8.5x13)" });
+        final int[] selectedService = { 0 };
+        final int[] selectedPaper = { 0 };
         final JTextField tfPages = makeField();
-        addFormRow(form, 0, "Service", cbService);
-        addFormRow(form, 1, "Paper size", cbPaper);
-        addFormRow(form, 2, "Number of pages", tfPages);
-        final JLabel unitPrice = label("", new Font("Segoe UI", Font.BOLD, 14), ACCENT);
-        addFormRow(form, 3, "Price per page", unitPrice);
-        Runnable refreshPrice = () -> unitPrice.setText(String.format("Php %.2f / page",
-                pricePerPage(cbService.getSelectedIndex(), cbPaper.getSelectedIndex())));
-        cbService.addActionListener(e -> refreshPrice.run());
-        cbPaper.addActionListener(e -> refreshPrice.run());
+        tfPages.setText("1");
+        tfPages.setName("pageQuantity");
+        final JLabel unitPrice = label("", new Font("Segoe UI", Font.BOLD, 16), ACCENT);
+        final JToggleButton[] services = new JToggleButton[4];
+        final JToggleButton[] papers = new JToggleButton[3];
+        final String[] serviceNames = { "Print / Black & white", "Print / Colored", "Xerox / Black & white", "Xerox / Colored" };
+        Runnable refreshPrice = () -> {
+            unitPrice.setText(String.format("Php %.2f / page", pricePerPage(selectedService[0], selectedPaper[0])));
+            for (int i = 0; i < services.length; i++) {
+                if (services[i] != null) {
+                    services[i].setText("<html><b>" + serviceNames[i] + "</b><br>Php "
+                            + String.format("%.2f", pricePerPage(i, selectedPaper[0])) + " / page</html>");
+                }
+            }
+        };
+        JPanel serviceGrid = new JPanel(new GridLayout(2, 2, 10, 10));
+        serviceGrid.setOpaque(false);
+        ButtonGroup serviceGroup = new ButtonGroup();
+        for (int i = 0; i < services.length; i++) {
+            final int index = i;
+            services[i] = choiceCard(serviceNames[i], "service" + i);
+            serviceGroup.add(services[i]);
+            serviceGrid.add(services[i]);
+            services[i].addActionListener(e -> { selectedService[0] = index; refreshPrice.run(); });
+        }
+        services[0].setSelected(true);
+        serviceGrid.setPreferredSize(new Dimension(0, 142));
+        serviceGrid.setMaximumSize(new Dimension(Integer.MAX_VALUE, 142));
+        form.add(serviceGrid);
+        form.add(Box.createVerticalStrut(14));
+        JLabel paperLabel = label("Paper size", new Font("Segoe UI", Font.BOLD, 13), DIM);
+        form.add(paperLabel);
+        form.add(Box.createVerticalStrut(8));
+        JPanel paperGrid = new JPanel(new GridLayout(1, 3, 10, 0));
+        paperGrid.setOpaque(false);
+        ButtonGroup paperGroup = new ButtonGroup();
+        String[] paperNames = { "Short", "A4", "Long" };
+        for (int i = 0; i < papers.length; i++) {
+            final int index = i;
+            papers[i] = choiceCard(paperNames[i], "paper" + i);
+            paperGroup.add(papers[i]);
+            paperGrid.add(papers[i]);
+            papers[i].addActionListener(e -> { selectedPaper[0] = index; refreshPrice.run(); });
+        }
+        papers[0].setSelected(true);
+        paperGrid.setPreferredSize(new Dimension(0, 48));
+        paperGrid.setMaximumSize(new Dimension(Integer.MAX_VALUE, 48));
+        form.add(paperGrid);
+        form.add(Box.createVerticalStrut(14));
+        JPanel quantity = new JPanel(new BorderLayout(12, 0));
+        quantity.setOpaque(false);
+        quantity.add(label("Pages", new Font("Segoe UI", Font.BOLD, 13), DIM), BorderLayout.WEST);
+        JPanel stepper = new JPanel(new BorderLayout(8, 0));
+        stepper.setOpaque(false);
+        JButton minus = makeButton("-", DIM);
+        JButton plus = makeButton("+", ACCENT);
+        minus.setPreferredSize(new Dimension(48, 46));
+        plus.setPreferredSize(new Dimension(48, 46));
+        minus.addActionListener(e -> adjustQuantity(tfPages, -1));
+        plus.addActionListener(e -> adjustQuantity(tfPages, 1));
+        tfPages.setHorizontalAlignment(SwingConstants.CENTER);
+        stepper.add(minus, BorderLayout.WEST);
+        stepper.add(tfPages, BorderLayout.CENTER);
+        stepper.add(plus, BorderLayout.EAST);
+        quantity.add(stepper, BorderLayout.CENTER);
+        quantity.add(unitPrice, BorderLayout.EAST);
+        quantity.setMaximumSize(new Dimension(Integer.MAX_VALUE, 46));
+        quantity.setPreferredSize(new Dimension(0, 46));
+        form.add(quantity);
+        for (Component row : form.getComponents()) {
+            if (row instanceof JComponent) ((JComponent) row).setAlignmentX(Component.LEFT_ALIGNMENT);
+        }
         refreshPrice.run();
         entry.add(form, BorderLayout.CENTER);
         JButton btnAdd = makeButton("Add to order", ACCENT);
-        btnAdd.setPreferredSize(new Dimension(0, 44));
+        btnAdd.setPreferredSize(new Dimension(0, 48));
         entry.add(btnAdd, BorderLayout.SOUTH);
         workspace.add(entry, BorderLayout.NORTH);
 
@@ -557,9 +619,9 @@ public class PrintCalc extends JFrame {
                         return;
                     }
 
-                    int si = cbService.getSelectedIndex();
+                    int si = selectedService[0];
                     String serviceName = new String[] { "Print B&W", "Print Color", "Xerox B&W", "Xerox Color" }[si];
-                    int pi = cbPaper.getSelectedIndex();
+                    int pi = selectedPaper[0];
                     double price = pricePerPage(si, pi);
                     String paperName;
                     if (pi == 0)
@@ -580,7 +642,7 @@ public class PrintCalc extends JFrame {
                     orderModel.addRow(
                             new Object[] { serviceName, paperName, pages, "Php " + String.format("%.2f", sub) });
                     updateOrderTotal();
-                    tfPages.setText("");
+                    tfPages.setText("1");
 
                 } catch (NumberFormatException x) {
                     err("Enter a valid number!");
@@ -731,6 +793,35 @@ public class PrintCalc extends JFrame {
     }
 
     // ===================== UI HELPERS =====================
+
+    JToggleButton choiceCard(String text, String name) {
+        JToggleButton button = new JToggleButton(text);
+        button.setName(name);
+        button.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        button.setFocusPainted(true);
+        button.setContentAreaFilled(false);
+        button.setOpaque(true);
+        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        Runnable style = () -> {
+            button.setBackground(button.isSelected() ? new Color(219, 234, 254) : BG_INPUT);
+            button.setForeground(button.isSelected() ? ACCENT : TEXT);
+            button.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(button.isSelected() ? ACCENT : new Color(210, 222, 237), 2),
+                    BorderFactory.createEmptyBorder(8, 10, 8, 10)));
+        };
+        button.addItemListener(e -> style.run());
+        style.run();
+        return button;
+    }
+
+    void adjustQuantity(JTextField field, int amount) {
+        try {
+            int current = Integer.parseInt(field.getText().trim());
+            field.setText(String.valueOf(Math.max(1L, Math.min(Integer.MAX_VALUE, (long) current + amount))));
+        } catch (NumberFormatException e) {
+            field.setText("1");
+        }
+    }
 
     JPanel uiCard(String title) {
         JPanel card = new JPanel(new BorderLayout(0, 16));
