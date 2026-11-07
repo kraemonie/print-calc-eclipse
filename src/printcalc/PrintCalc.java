@@ -936,13 +936,24 @@ public class PrintCalc extends JFrame {
     }
 
     JButton makeButton(String text, final Color color) {
-        final JButton b = new JButton(text);
+        final JButton b = new JButton(text) {
+            @Override
+            protected void paintComponent(Graphics graphics) {
+                Graphics2D g = (Graphics2D) graphics.create();
+                g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g.setColor(getModel().isPressed() ? getBackground().darker() : getBackground());
+                g.fillRoundRect(0, 0, getWidth(), getHeight(), 20, 20);
+                g.dispose();
+                super.paintComponent(graphics);
+            }
+        };
         b.setFont(new Font("Segoe UI", Font.BOLD, 13));
         b.setForeground(Color.WHITE);
         b.setBackground(color);
         b.setFocusPainted(false);
         b.setBorderPainted(false);
-        b.setOpaque(true);
+        b.setOpaque(false);
+        b.setContentAreaFilled(false);
         b.setBorder(BorderFactory.createEmptyBorder(10, 16, 10, 16));
         b.setCursor(new Cursor(Cursor.HAND_CURSOR));
         b.addMouseListener(new MouseAdapter() {
@@ -989,6 +1000,11 @@ public class PrintCalc extends JFrame {
     }
 
     String receiptText(String date, String time, double total, double cash, double change) {
+        return receiptPageText(date, time, total, cash, change, currentOrder);
+    }
+
+    String receiptPageText(String date, String time, double total, double cash, double change,
+            java.util.List<String[]> items) {
         String rule = "------------------------------------------\n";
         StringBuilder receipt = new StringBuilder();
         receipt.append("                PRINTCALC\n");
@@ -998,7 +1014,7 @@ public class PrintCalc extends JFrame {
         receipt.append(rule);
         receipt.append(String.format("%-30s %11s%n", "ITEM / QUANTITY", "AMOUNT"));
         receipt.append(rule);
-        for (String[] item : currentOrder) {
+        for (String[] item : items) {
             receipt.append(item[0]).append(" / ").append(item[1]).append("\n");
             receipt.append(String.format("  %-28s %11s%n", item[2] + " page(s)",
                     String.format("Php %.2f", Double.parseDouble(item[3]))));
@@ -1016,76 +1032,59 @@ public class PrintCalc extends JFrame {
     void showReceipt(String date, String time, double total, double cash, double change) {
         JDialog dialog = new JDialog(this, "Sales receipt", true);
         dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
-        JPanel content = new JPanel(new BorderLayout(0, 16));
-        content.setBackground(BG_PAGE);
-        content.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
-        JPanel paper = new JPanel(new BorderLayout(0, 24));
+        JPanel content = new JPanel(new BorderLayout(0, 14));
+        content.setBackground(new Color(234, 237, 241));
+        content.setBorder(BorderFactory.createEmptyBorder(18, 18, 18, 18));
+
+        // One continuous receipt, sized to its contents rather than a fixed item viewport.
+        JTextArea receipt = new JTextArea(receiptText(date, time, total, cash, change));
+        receipt.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 13));
+        receipt.setForeground(new Color(32, 32, 32));
+        receipt.setBackground(Color.WHITE);
+        receipt.setEditable(false);
+        receipt.setFocusable(false);
+        receipt.setLineWrap(false);
+        receipt.setMargin(new Insets(24, 22, 24, 22));
+        JPanel paper = new JPanel(new BorderLayout());
         paper.setBackground(Color.WHITE);
-        paper.setBorder(BorderFactory.createEmptyBorder(26, 26, 26, 26));
-        JPanel heading = new JPanel(new BorderLayout(0, 12));
-        heading.setOpaque(false);
-        JLabel brand = label("PRINTCALC", new Font("Segoe UI", Font.BOLD, 26), ACCENT);
-        heading.add(brand, BorderLayout.NORTH);
-        JPanel details = new JPanel(new BorderLayout(0, 6));
-        details.setOpaque(false);
-        details.add(label("Payment received", new Font("Segoe UI", Font.BOLD, 18), GREEN), BorderLayout.NORTH);
-        details.add(label("Sales receipt  /  " + date + "  " + time,
-                new Font("Segoe UI", Font.PLAIN, 12), DIM), BorderLayout.SOUTH);
-        heading.add(details, BorderLayout.CENTER);
-        heading.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createMatteBorder(0, 0, 3, 0, ACCENT),
-                BorderFactory.createEmptyBorder(0, 0, 20, 0)));
-        paper.add(heading, BorderLayout.NORTH);
-
-        JPanel lines = new JPanel();
-        lines.setLayout(new BoxLayout(lines, BoxLayout.Y_AXIS));
-        lines.setBackground(Color.WHITE);
-        for (String[] item : currentOrder) {
-            JPanel row = new JPanel(new BorderLayout(12, 6));
-            row.setOpaque(false);
-            row.setAlignmentX(Component.LEFT_ALIGNMENT);
-            row.setBorder(BorderFactory.createCompoundBorder(
-                    BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(225, 232, 241)),
-                    BorderFactory.createEmptyBorder(14, 0, 14, 0)));
-            row.add(label(item[0], new Font("Segoe UI", Font.BOLD, 15), TEXT), BorderLayout.WEST);
-            row.add(label("Php " + item[3], new Font("Segoe UI", Font.BOLD, 15), TEXT), BorderLayout.EAST);
-            row.add(label(item[1] + " paper  /  " + item[2] + " page(s)",
-                    new Font("Segoe UI", Font.PLAIN, 13), DIM), BorderLayout.SOUTH);
-            row.setMaximumSize(new Dimension(Integer.MAX_VALUE, row.getPreferredSize().height));
-            lines.add(row);
-        }
-        lines.add(Box.createVerticalGlue());
-        JScrollPane itemScroll = new JScrollPane(lines);
-        itemScroll.setBorder(BorderFactory.createEmptyBorder());
-        itemScroll.setPreferredSize(new Dimension(360, 180));
-        paper.add(itemScroll, BorderLayout.CENTER);
-
-        JPanel footer = new JPanel(new BorderLayout(0, 18));
-        footer.setOpaque(false);
-        JPanel totals = new JPanel(new GridLayout(3, 2, 12, 12));
-        totals.setBackground(new Color(239, 246, 255));
-        totals.setBorder(BorderFactory.createEmptyBorder(18, 18, 18, 18));
-        String[] captions = { "TOTAL PAID", "Cash received", "Change" };
-        double[] amounts = { total, cash, change };
-        for (int i = 0; i < captions.length; i++) {
-            Font font = new Font("Segoe UI", i == 0 ? Font.BOLD : Font.PLAIN, i == 0 ? 20 : 14);
-            totals.add(label(captions[i], font, i == 0 ? ACCENT : DIM));
-            JLabel amount = label(String.format("Php %.2f", amounts[i]), font, i == 0 ? ACCENT : TEXT);
-            amount.setHorizontalAlignment(SwingConstants.RIGHT);
-            totals.add(amount);
-        }
-        footer.add(totals, BorderLayout.NORTH);
-        JLabel thanks = label("Thank you for printing with us!", new Font("Segoe UI", Font.PLAIN, 13), DIM);
-        thanks.setHorizontalAlignment(SwingConstants.CENTER);
-        footer.add(thanks, BorderLayout.SOUTH);
-        paper.add(footer, BorderLayout.SOUTH);
+        paper.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createMatteBorder(1, 1, 3, 2, new Color(200, 204, 210)),
+                BorderFactory.createEmptyBorder(0, 0, 0, 0)));
+        paper.add(receipt, BorderLayout.CENTER);
         content.add(paper, BorderLayout.CENTER);
+        Rectangle screen = getGraphicsConfiguration().getBounds();
+        Insets screenInsets = Toolkit.getDefaultToolkit().getScreenInsets(getGraphicsConfiguration());
+        int availableHeight = screen.height - screenInsets.top - screenInsets.bottom - 40;
+        int lineHeight = receipt.getFontMetrics(receipt.getFont()).getHeight();
+        int itemsPerPage = Math.max(1, ((availableHeight - 180) / lineHeight - 22) / 2);
+        int pageCount = Math.max(1, (currentOrder.size() + itemsPerPage - 1) / itemsPerPage);
+        final int[] page = { 0 };
+        JButton previous = makeButton("Previous", DIM);
+        JButton next = makeButton("Next", ACCENT);
         JButton close = makeButton("Done", ACCENT);
+        close.setPreferredSize(new Dimension(0, 44));
         close.addActionListener(e -> dialog.dispose());
-        content.add(close, BorderLayout.SOUTH);
+        JPanel actions = new JPanel(new GridLayout(1, pageCount > 1 ? 3 : 1, 8, 0));
+        actions.setOpaque(false);
+        if (pageCount > 1) { actions.add(previous); actions.add(next); }
+        actions.add(close);
+        content.add(actions, BorderLayout.SOUTH);
+        Runnable renderPage = () -> {
+            int first = page[0] * itemsPerPage;
+            int last = Math.min(currentOrder.size(), first + itemsPerPage);
+            String text = receiptPageText(date, time, total, cash, change, currentOrder.subList(first, last));
+            if (pageCount > 1) text += String.format("             Page %d of %d%n", page[0] + 1, pageCount);
+            receipt.setText(text);
+            previous.setEnabled(page[0] > 0);
+            next.setEnabled(page[0] + 1 < pageCount);
+            dialog.pack();
+            dialog.setLocationRelativeTo(this);
+        };
+        previous.addActionListener(e -> { if (page[0] > 0) { page[0]--; renderPage.run(); } });
+        next.addActionListener(e -> { if (page[0] + 1 < pageCount) { page[0]++; renderPage.run(); } });
         dialog.setContentPane(content);
-        dialog.setSize(520, 680);
-        dialog.setMinimumSize(new Dimension(500, 600));
+        renderPage.run();
+        dialog.setResizable(false);
         dialog.setLocationRelativeTo(this);
         dialog.getRootPane().setDefaultButton(close);
         dialog.setVisible(true);
