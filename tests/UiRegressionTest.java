@@ -29,14 +29,15 @@ public class UiRegressionTest {
     user.setText("cashier");password.setText("cashier123");button(login,"LOGIN").doClick();
     JPanel cashier=(JPanel)root.getComponent(2);
     java.util.List<Component> cc=all(cashier);
-    java.util.List<JComboBox> combos=new ArrayList<>();
+    java.util.Map<String,JToggleButton> choices=new HashMap<>();
     java.util.List<JTextField> fields=new ArrayList<>();
     java.util.List<JTable> tables=new ArrayList<>();
-    for(Component c:cc){if(c instanceof JComboBox)combos.add((JComboBox)c);if(c instanceof JTextField)fields.add((JTextField)c);if(c instanceof JTable)tables.add((JTable)c);}
+    for(Component c:cc){if(c instanceof JToggleButton)choices.put(c.getName(),(JToggleButton)c);if(c instanceof JTextField)fields.add((JTextField)c);if(c instanceof JTable)tables.add((JTable)c);}
     double[][] expected={{3,5,7},{5,7,10},{2,3,5},{5,6,8}};
     for(int service=0;service<4;service++)for(int paper=0;paper<3;paper++){
      check(PrintCalc.pricePerPage(service,paper)==expected[service][paper],"Price mismatch");
-     combos.get(0).setSelectedIndex(service);combos.get(1).setSelectedIndex(paper);
+     choices.get("service"+service).doClick();choices.get("paper"+paper).doClick();
+     check(choices.get("service"+service).isSelected()&&choices.get("paper"+paper).isSelected(),"Tapped cards must remain selected");
      fields.get(0).setText("2");button(cashier,"Add to order").doClick();
      String amount=tables.get(0).getValueAt(tables.get(0).getRowCount()-1,3).toString();
      check(amount.equals(String.format("Php %.2f",expected[service][paper]*2)),"Order subtotal mismatch: "+amount);
